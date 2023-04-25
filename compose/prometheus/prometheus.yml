@@ -1,0 +1,73 @@
+global:
+  scrape_interval: 15s # Set the scrape interval to every 15 seconds. Default is every 1 minute.
+  evaluation_interval: 15s # Evaluate rules every 15 seconds. The default is every 1 minute.
+
+# alerting:
+#   alertmanagers:
+#     - static_configs:
+#         - targets:
+#           - alertmanager:9093
+
+rule_files:
+  - "rules.yml"
+
+scrape_configs:
+  - job_name: 'node'
+    # Override the global default and scrape targets from this job every 5 seconds.
+    scrape_interval: 15s
+    static_configs:
+         - targets: ['node:9100']
+           labels:
+             instance: grafana
+
+  - job_name: blackbox-exporter
+    metrics_path: /probe
+    params:
+      module: [ http_2xx ]  # Look for a HTTP 200 response.
+    dns_sd_configs:
+      - names:
+          - bakra.portal.practical-devsecops.training
+          - registry.practical-devsecops.training
+          - gitlab.practical-devsecops.training
+          - ohmygit.practical-devsecops.training
+          - learn.practical-devsecops.com
+          - dashboards.practical-devsecops.training
+          - alerting.practical-devsecops.training
+          - loki.practical-devsecops.training
+          - bakra.id.practical-devsecops.training
+        type: A
+        port: 443
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+        replacement: https://$1/
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: blackbox:9115  # The blackbox exporter's real hostname:port.
+      - source_labels: [__meta_dns_name]
+        target_label: __param_hostname
+      - source_labels: [__meta_dns_name]
+        target_label: vhost
+
+  - job_name: machine
+    metrics_path: /probe
+    params:
+      module: [ http_2xx ]  # Look for a HTTP 200 response.
+    dns_sd_configs:
+      - names:
+          - machine.lab.practical-devsecops.training
+        type: A
+        port: 443
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+        replacement: https://$1/
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: blackbox:9115  # The blackbox exporter's real hostname:port.
+      - source_labels: [__meta_dns_name]
+        target_label: __param_hostname
+      - source_labels: [__meta_dns_name]
+        target_label: vhost

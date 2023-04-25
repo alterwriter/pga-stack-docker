@@ -1,0 +1,74 @@
+version: '3'
+
+services:
+  grafana:
+    build:
+      context: ./compose/grafana/
+    container_name: grafana
+    restart: always
+    ports:
+      - 3000:3000
+    environment:
+      - GF_AUTH_ANONYMOUS_ENABLED=false
+      - GF_AUTH_BASIC_ENABLED=false
+      - GF_ENABLE_GZIP=true
+    volumes:
+      - grafana-data:/var/lib/grafana
+
+  # loki:
+  #   build:
+  #     context: ./compose/loki/
+  #   container_name: loki
+  #   ports:
+  #     - 3100:3100
+  #   restart: always
+  #   command: -config.file=/etc/loki/local-config.yaml
+  #   links:
+  #     - promtail
+
+  # promtail:
+  #   build:
+  #     context: ./compose/promtail/
+  #   container_name: promtail
+  #   volumes:
+  #     - /var/run/docker.sock:/var/run/docker.sock
+  #   command: -config.file=/etc/promtail/config.yaml
+
+  prometheus:
+    build:
+      context: ./compose/prometheus/
+    container_name: prometheus
+    ports:
+      - 9090:9090
+    restart: always
+    links:
+      - node
+      - blackbox
+
+  node:
+    build: 
+      context: ./compose/node/
+    container_name: node
+    ports:
+      - 9100:9100
+    restart: always
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.rootfs=/rootfs'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+
+  blackbox:
+    build: 
+      context: ./compose/blackbox/
+    container_name: blackbox
+    ports:
+      - 9115:9115
+    restart: always
+
+volumes:
+  grafana-data:
